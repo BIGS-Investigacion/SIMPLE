@@ -33,10 +33,14 @@ parser.add_argument("--dataset", "--dataset", help="this is dataset that will be
 parser.add_argument("--domainbed_dataset", "--domainbed_dataset", dest="domainbed_dataset", default=None, type=str)
 parser.add_argument("--domainbed_test_env", "--domainbed_test_env", dest="domainbed_test_env", default=0, type=int)
 parser.add_argument("--pretrain_model_list", "--pretrain_model_list", dest="pretrain_model_list", default='modelpool_list/model_list_test.txt', type=str)
+parser.add_argument("--input_dir", "--input_dir", dest="input_dir", default='./miscellaneous/domainbed/data/', type=str)
+parser.add_argument("--output_dir", "--output_dir", dest="output_dir", default='output/', type=str)
+parser.add_argument("--infer_dir", "--infer_dir", dest="infer_dir", default="./inferences/")
 
 # mode setting
 parser.add_argument("--save_inference_only", "--save_inference_only", dest="save_inference_only", action='store_true')
 parser.add_argument("--pure_imagenet_pretrained", "--pure_imagenet_pretrained", dest="pure_imagenet_pretrained", action='store_true')
+parser.add_argument("--save_as_domainbed", "--save_as_domainbed", dest="save_as_domainbed", action='store_true')
 parser.add_argument("--idx_for_inference_saving", "--idx_for_inference_saving", dest="idx_for_infer_save", default=-1, type=int)
 parser.add_argument("--model_idx", "--model_idx", help="this is model_idx (select one model to see its performance)", dest="model_idx", type=int, default=None)
 
@@ -109,14 +113,14 @@ torch.manual_seed(args.random_seed)
 print('Successfully imported all packages and configured random seed to %d!'%args.random_seed)
 
 # set directories for logs and models
-save_dir = './logs/'
-model_save_dir = './models/' 
+save_dir = args.output_dir +'/logs/'
+model_save_dir = args.output_dir + '/models/'
 
 # if directories don't exist, create them
 if not os.path.exists(model_save_dir):
-    os.mkdir(model_save_dir)
+    os.makedirs(model_save_dir)
 if not os.path.exists(save_dir):
-    os.mkdir(save_dir)
+    os.makedirs(save_dir)
 
 # redirect standard output to logger
 sys.stdout = Logger(save_dir + 'running.log')
@@ -136,7 +140,7 @@ args.pretrained_models = pretrained_models
 
 # if working with domainbed dataset, set data directory
 if args.dataset == 'domainbed':
-    data_dir = '/home/private_user_1/v-liziyue/ziyue/domainbed_inference_saved_' + args.domainbed_dataset + '/'
+    data_dir = os.path.join(args.infer_dir, ('domainbed_inference_saved_' + args.domainbed_dataset + '/'))
 
 # initialize model pool and ensemble network
 model_pool = Model_pool(model_name = pretrained_models, model_num = args.model_num, model_idx = args.model_idx, dataset = args.dataset,sub_dataset = args.domainbed_dataset, data_dir = data_dir, args = args)
@@ -222,7 +226,7 @@ else: # else train model
                 print('early stop')
                 break
         else: # implement early stopping for DomainNet dataset
-            if early_stop_count == 3:
+            if val_acc >= 100 or early_stop_count == 3:
                 print('DomainNet early stop')
                 break            
 
@@ -241,11 +245,17 @@ else: # else train model
 
     res['domainbed_test_env'] = args.domainbed_test_env
     res['valbest_test_acc'] = valbest_test_acc
+    res['best_val_acc'] = best_val_acc
     res['sum_bp_time'] = sum_bp_time
     res['num_params'] = ensemble_net.num_params
 
     # save results in json format
-    if args.idx_for_infer_save == -1:
+    if args.save_as_domainbed:
+        with open(f"{args.output_dir}/results.json","w") as f:
+            json.dump(res, f, indent=4, sort_keys=True)
+        with open(f"{args.output_dir}/done","w") as f:
+            f.write("done")
+    elif args.idx_for_infer_save == -1:
         with open(f"{save_dir}/{args.random_seed}_{args.domainbed_test_env}_res.json", "w") as f:
             json.dump(res, f, indent=4, sort_keys=True)
     else:

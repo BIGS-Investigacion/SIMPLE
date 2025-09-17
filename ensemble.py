@@ -169,7 +169,7 @@ class Model_pool(torch.nn.Module):
     # Inference using preloaded models in self.preload_dic
     def inference_by_preload(self, images, idxs, domain_idxs = None, split = None, epoch = -1):
         y_hats = []
-        length = 256
+        length = self.args.batch_size
 
         # For each model in self.clear_model_name, load the model's predictions for the specified idxs into y_hat
         for model_name in self.clear_model_name:
@@ -360,7 +360,7 @@ class Ensemble_of_ensemble(torch.nn.Module):
         if args.dataset == 'domainbed':
             
             # Set the data directory to './miscellaneous/domainbed/data/'
-            data_dir = './miscellaneous/domainbed/data/'
+            data_dir = args.input_dir
             
             # Check if args.super_mixed is False
             if args.super_mixed == False:

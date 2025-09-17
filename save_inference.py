@@ -34,7 +34,7 @@ def inference_saver(args, ensemble_net, model_pool):
             model_dir = '/domainbed_inference_saved_' + args.domainbed_dataset + '/' + model_name + '/'
         else:
             model_dir = '/domainbed_inference_saved_' + args.domainbed_dataset + '/' + model_name.split(':')[0] + '/'
-        ifexist_model_dir = '/home/private_user_1/v-liziyue/ziyue' + model_dir
+        ifexist_model_dir = args.infer_dir + model_dir
 
         # Create a dictionary to store the number of files for the current model
         file_num_dic[model_name] = {}
