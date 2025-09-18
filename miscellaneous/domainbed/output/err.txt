@@ -1,0 +1,96 @@
+/home/v-liziyue/.local/lib/python3.8/site-packages/torch/utils/data/dataloader.py:474: UserWarning: This DataLoader will create 8 worker processes in total. Our suggested max number of worker in current system is 6, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(_create_warning_msg(
+Traceback (most recent call last):
+  File "/anaconda/envs/sedge/lib/python3.8/runpy.py", line 192, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/anaconda/envs/sedge/lib/python3.8/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/home/v-liziyue/CV-tasks/pretrained_spec_gnn_ot/src/domainbed/scripts/train.py", line 216, in <module>
+    step_vals = algorithm.update(minibatches_device, uda_device)
+  File "/home/v-liziyue/CV-tasks/pretrained_spec_gnn_ot/src/domainbed/algorithms.py", line 1007, in update
+    logits = self.network(x)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/container.py", line 119, in forward
+    input = module(input)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/v-liziyue/CV-tasks/pretrained_spec_gnn_ot/src/domainbed/networks.py", line 104, in forward
+    return self.dropout(self.network(x))
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torchvision/models/resnet.py", line 249, in forward
+    return self._forward_impl(x)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torchvision/models/resnet.py", line 237, in _forward_impl
+    x = self.layer1(x)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/container.py", line 119, in forward
+    input = module(input)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torchvision/models/resnet.py", line 125, in forward
+    out = self.bn1(out)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/batchnorm.py", line 135, in forward
+    return F.batch_norm(
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/functional.py", line 2149, in batch_norm
+    return torch.batch_norm(
+RuntimeError: CUDA out of memory. Tried to allocate 26.00 MiB (GPU 0; 15.90 GiB total capacity; 6.23 GiB already allocated; 14.06 MiB free; 6.40 GiB reserved in total by PyTorch)
+/home/v-liziyue/.local/lib/python3.8/site-packages/torch/utils/data/dataloader.py:474: UserWarning: This DataLoader will create 8 worker processes in total. Our suggested max number of worker in current system is 6, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(_create_warning_msg(
+Traceback (most recent call last):
+  File "/anaconda/envs/sedge/lib/python3.8/runpy.py", line 192, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/anaconda/envs/sedge/lib/python3.8/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/home/v-liziyue/CV-tasks/pretrained_spec_gnn_ot/src/domainbed/scripts/train.py", line 216, in <module>
+    step_vals = algorithm.update(minibatches_device, uda_device)
+  File "/home/v-liziyue/CV-tasks/pretrained_spec_gnn_ot/src/domainbed/algorithms.py", line 1007, in update
+    logits = self.network(x)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/container.py", line 119, in forward
+    input = module(input)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/v-liziyue/CV-tasks/pretrained_spec_gnn_ot/src/domainbed/networks.py", line 104, in forward
+    return self.dropout(self.network(x))
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torchvision/models/resnet.py", line 249, in forward
+    return self._forward_impl(x)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torchvision/models/resnet.py", line 237, in _forward_impl
+    x = self.layer1(x)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/container.py", line 119, in forward
+    input = module(input)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torchvision/models/resnet.py", line 125, in forward
+    out = self.bn1(out)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/modules/batchnorm.py", line 135, in forward
+    return F.batch_norm(
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/nn/functional.py", line 2149, in batch_norm
+    return torch.batch_norm(
+RuntimeError: CUDA out of memory. Tried to allocate 26.00 MiB (GPU 0; 15.90 GiB total capacity; 6.23 GiB already allocated; 14.06 MiB free; 6.40 GiB reserved in total by PyTorch)
+/home/v-liziyue/.local/lib/python3.8/site-packages/torch/utils/data/dataloader.py:474: UserWarning: This DataLoader will create 8 worker processes in total. Our suggested max number of worker in current system is 6, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(_create_warning_msg(
+Traceback (most recent call last):
+  File "/anaconda/envs/sedge/lib/python3.8/runpy.py", line 192, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/anaconda/envs/sedge/lib/python3.8/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/home/v-liziyue/CV-tasks/pretrained_spec_gnn_ot/src/domainbed/scripts/train.py", line 216, in <module>
+    step_vals = algorithm.update(minibatches_device, uda_device)
+  File "/home/v-liziyue/CV-tasks/pretrained_spec_gnn_ot/src/domainbed/algorithms.py", line 1012, in update
+    env_grad = autograd.grad(env_loss, self.network.parameters(), 
+  File "/home/v-liziyue/.local/lib/python3.8/site-packages/torch/autograd/__init__.py", line 223, in grad
+    return Variable._execution_engine.run_backward(
+RuntimeError: CUDA out of memory. Tried to allocate 50.00 MiB (GPU 0; 15.90 GiB total capacity; 14.43 GiB already allocated; 29.06 MiB free; 14.89 GiB reserved in total by PyTorch)
+/home/v-liziyue/.local/lib/python3.8/site-packages/torch/utils/data/dataloader.py:474: UserWarning: This DataLoader will create 8 worker processes in total. Our suggested max number of worker in current system is 6, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(_create_warning_msg(
