@@ -36,6 +36,8 @@ parser.add_argument("--pretrain_model_list", "--pretrain_model_list", dest="pret
 parser.add_argument("--input_dir", "--input_dir", dest="input_dir", default='./miscellaneous/domainbed/data/', type=str)
 parser.add_argument("--output_dir", "--output_dir", dest="output_dir", default='output/', type=str)
 parser.add_argument("--infer_dir", "--infer_dir", dest="infer_dir", default="./inferences/")
+parser.add_argument("--hparam_seed", "--hparam_seed", help="random hparam seed (for sweep only)", dest="hparam_seed", type=int, default=0)
+parser.add_argument("--trial_seed", "--trial_seed", help="random trial seed (for sweep only)", dest="trial_seed", type=int, default=0)
 
 # mode setting
 parser.add_argument("--save_inference_only", "--save_inference_only", dest="save_inference_only", action='store_true')
@@ -86,6 +88,8 @@ args = parser.parse_args()
 # the lr of clf is a scale (args.clf_lr) of the lr of the ensemble network
 # be attention that current the ensemble network is a GNN model, so the tuning of lr will change a large
 args.clf_lr = args.clf_lr*args.ensemble_lr
+
+args.save_as_domainbed = True
 
 #print the command-line arguments obtained from the user
 print('args:',args)
@@ -235,6 +239,8 @@ else: # else train model
     print('valbest_test_acc: ', valbest_test_acc)
 
     # record results in dictionary
+    res['trial_seed'] = args.trial_seed
+    res['hparam_seed'] = args.hparam_seed
     res['seed'] = args.random_seed
     res['dataset'] = args.domainbed_dataset
 
@@ -248,6 +254,16 @@ else: # else train model
     res['best_val_acc'] = best_val_acc
     res['sum_bp_time'] = sum_bp_time
     res['num_params'] = ensemble_net.num_params
+
+    res['hparams'] = {
+        'ensemble_weight': args.ensemble_weight,
+        'child_weight': args.child_weight,
+        'confidence_weight': args.confidence_weight,
+        'batch_size': args.batch_size,
+        'ensemble_lr': args.ensemble_lr,
+        'clf_lr': args.clf_lr,
+        'weight_decay': args.weight_decay
+    }
 
     # save results in json format
     if args.save_as_domainbed:
