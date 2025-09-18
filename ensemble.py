@@ -16,6 +16,7 @@ import numpy as np
 import pretrainedmodels
 from itertools import chain
 import miscellaneous.clip as clip
+import model_wrappers as model_wrap
 
 from utils import WarmUpLR
 import miscellaneous.model.models_vit as models_vit
@@ -28,7 +29,12 @@ from data_domainbed import domainbed_dataloader
 dataset_inference_information = {
     'domainbed': {'PACS': {'preload': True, 'domain_num': 4, 'class_type': 7}, 'VLCS': {'preload': True, 'domain_num': 4, 'class_type': 5},
         'OfficeHome': {'preload': True, 'domain_num': 4, 'class_type': 65},
-        'TerraIncognita': {'preload': True, 'domain_num': 4, 'class_type': 10}, 'DomainNet': {'preload': True, 'domain_num': 6, 'class_type': 345}},
+        'TerraIncognita': {'preload': True, 'domain_num': 4, 'class_type': 10}, 'DomainNet': {'preload': True, 'domain_num': 6, 'class_type': 345},
+
+        'CervixCyto': {'preload': True, 'domain_num': 4, 'class_type': 3}, 'ColoHisto':{'preload': True, 'domain_num': 4, 'class_type': 2},
+        'BreastHist':{'preload': True, 'domain_num': 4, 'class_type': 2}, 'LungHist':{'preload': True, 'domain_num': 4, 'class_type': 2},
+        'ProstateHist':{'preload': True, 'domain_num': 4, 'class_type': 4}
+        },
     'flops_test': {'preload': False}
 }
 
@@ -132,6 +138,13 @@ class Model_pool(torch.nn.Module):
                 aux_info, map_location='cpu')
 
             model.load_state_dict(checkpoint['model'])
+        # If prefix is 'patho' load pathological model
+        elif prefix == 'patho':
+            model_name_split = model_name.split(':')
+            model_arch = model_name_split[0]
+            aux_info = model_name_split[1] if len(model_name_split) > 1 else None
+
+            model = vars(model_wrap)[model_arch](aux_info)
 
         return model
         
@@ -157,10 +170,11 @@ class Model_pool(torch.nn.Module):
 
         y_hats = []
         for i in range(len(self.model_name)):
-            with torch.no_grad():
+            with torch.autocast(device_type="cuda", dtype=torch.float16):
                 self.models[i] = self.models[i].to(images.device)
                 self.models[i].eval()
-                y_hat = self.models[i](images) # (B, 1000), list
+                with torch.no_grad():
+                    y_hat = self.models[i](images) # (B, 1000), list
                 self.models[i].cpu()
             y_hats.append(y_hat)
             torch.cuda.empty_cache() 
@@ -275,7 +289,7 @@ class Ensemble_of_ensemble(torch.nn.Module):
             self.ensemble_net = Ensemble_net(args)
             
             if args.domainbed_dataset != 'DomainNet':
-                self.task_head_list = [1000, 21843, 21841, 768, 1024, 1280, 3024, 3712, 7392, 11221]
+                self.task_head_list = [1000, 21843, 21841, 768, 1024, 1280, 3024, 3712, 7392, 11221, 512, 2048, 2560, 1536]
                 self.task_specific_head = nn.ModuleList()
                 self.task_specific_head.append(task_head(1000,class_type))
                 
@@ -290,6 +304,10 @@ class Ensemble_of_ensemble(torch.nn.Module):
                     self.task_specific_head.append(task_head(3712,class_type)) # regnety_32gf
                     self.task_specific_head.append(task_head(7392,class_type)) # regnety_128gf
                     self.task_specific_head.append(task_head(11221,class_type)) # regnety_128gf
+                    self.task_specific_head.append(task_head(512,class_type)) # biomed, quilt, plip
+                    self.task_specific_head.append(task_head(2048,class_type)) # retccl, musk
+                    self.task_specific_head.append(task_head(2560,class_type)) # virchow2
+                    self.task_specific_head.append(task_head(1536,class_type)) # uni2, gigapath, h-optimus-0
 
             # If domainbed_dataset is DomainNet, set task_head_list to a specific list of numbers and append each to task_specific_head.
             else:
@@ -367,9 +385,9 @@ class Ensemble_of_ensemble(torch.nn.Module):
                 
                 # Check if epoch is equal to -1
                 if epoch == -1:
-                    work_num_dic = {'DomainNet': 0, 'VLCS': 4, 'PACS': 4, 'OfficeHome': 2, 'TerraIncognita': 0}
+                    work_num_dic = {'DomainNet': 0, 'VLCS': 4, 'PACS': 4, 'OfficeHome': 2, 'TerraIncognita': 0, 'CervixCyto':4, 'ColoHisto':4, 'BreastHist':4, 'DermaDG': 4, 'LungHist':4, 'OrganMNIST':4, 'ProstateHist':4}
                 else:
-                    work_num_dic = {'DomainNet': 2, 'VLCS': 4, 'PACS': 4, 'OfficeHome': 2, 'TerraIncognita': 4}
+                    work_num_dic = {'DomainNet': 2, 'VLCS': 4, 'PACS': 4, 'OfficeHome': 2, 'TerraIncognita': 4, 'CervixCyto':4, 'ColoHisto':4, 'BreastHist':4, 'DermaDG': 4, 'LungHist':4, 'OrganMNIST':4, 'ProstateHist':4}
                 
                 # Load the data using the domainbed_dataloader function and assign it to the train_loader, val_loader, test_loader, full_loader, and class_name variables
                 self.train_loader, self.val_loader, self.test_loader, self.full_loader, self.class_name = domainbed_dataloader(dataset = args.domainbed_dataset, data_dir = data_dir,\
@@ -400,9 +418,9 @@ class Ensemble_of_ensemble(torch.nn.Module):
                 
                 # Check if epoch is equal to -1
                 if epoch == -1:
-                    work_num_dic = {'DomainNet': 0, 'VLCS': 4, 'PACS': 4, 'OfficeHome': 2, 'TerraIncognita': 0}
+                    work_num_dic = {'DomainNet': 0, 'VLCS': 4, 'PACS': 4, 'OfficeHome': 2, 'TerraIncognita': 0, 'CervixCyto':4, 'ColoHisto':4,  'BreastHist':4, 'LungHist':4, 'ProstateHist':4}
                 else:
-                    work_num_dic = {'DomainNet': 4, 'VLCS': 4, 'PACS': 4, 'OfficeHome': 2, 'TerraIncognita': 4}
+                    work_num_dic = {'DomainNet': 4, 'VLCS': 4, 'PACS': 4, 'OfficeHome': 2, 'TerraIncognita': 4, 'CervixCyto':4, 'ColoHisto':4,  'BreastHist':4, 'LungHist':4, 'ProstateHist':4}
                 
                 # Load the data using the domainbed_dataloader function and assign it to the train_loader_1, val_loader, test_loader, full_loader, and class_name variables
                 train_loader_1, self.val_loader, self.test_loader, self.full_loader, self.class_name = domainbed_dataloader(dataset = args.domainbed_dataset, data_dir = data_dir,\
