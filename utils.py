@@ -11,7 +11,12 @@ def accuracy(output, target, topk=(1,)):
     """ Computes the precision@k for the specified values of k """
     
     # Set the maximum value of k
-    maxk = max(topk)
+    if output.size(1) < max(topk):
+        maxk = output.size(1)
+        topk = (1,maxk)
+    else:
+        maxk = max(topk)
+
     # Determine batch size
     batch_size = target.size(0)
 
@@ -138,7 +143,8 @@ def walkFile(file):
 
 # Function for Checking the File Number
 def check_file_number(dir_to_check, domainbed_dataset):
-    dic = {'PACS':41, 'VLCS': 44, 'OfficeHome': 64, 'TerraIncognita': 97, 'DomainNet': 2295}
+    dic = {'PACS':41, 'VLCS': 44, 'OfficeHome': 64, 'TerraIncognita': 97, 'DomainNet': 2295,
+    'ColoHisto':17285, 'BreastHist':18748, "LungHist":30025, "ProstateHist":175856}
     # Define a variable for the file count
     num = walkFile(dir_to_check)
     # Compare the number of files with the expected value
