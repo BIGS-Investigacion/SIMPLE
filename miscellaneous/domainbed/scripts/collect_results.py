@@ -30,16 +30,6 @@ def get_grouped_records(records):
 
 def IIDAccuracySelectionMethod(records):
 
-    print('Best Validation Accuracy')
-    for r in records:
-        print(r['best_val_acc'])
-
-    print('Test Accuracy for log with best Validation accuracy')
-    for r in records:
-        print(r['valbest_test_acc'])
-
-    print('\n')
-
     return records.argmax('best_val_acc')['valbest_test_acc']
 
 def format_mean(data, latex):
@@ -53,6 +43,22 @@ def format_mean(data, latex):
         return mean, err, "{:.1f} $\\pm$ {:.1f}".format(mean, err)
     else:
         return mean, err, "{:.1f} +/- {:.1f}".format(mean, err)
+
+def print_trials(results, domain_names=None, latex=False):
+    """
+    Print all trials per domain neatly with proper domain names.
+    """
+    if domain_names is None:
+        domain_names = [f"Domain {i+1}" for i in range(len(results))]
+    
+    print("Leave-One-Domain-Out Trials:")
+    print("-" * 60)
+    
+    for name, trials in zip(domain_names, results):
+        trials_str = ", ".join(f"{t:.2f}" for t in trials)
+        print(f"{name:15}: [{trials_str}]")
+    
+    print("-" * 60)
 
 def print_table(table, header_text, row_labels, col_labels, colwidth=10,
     latex=True):
@@ -91,7 +97,6 @@ def main():
     parser = argparse.ArgumentParser(
         description="Domain generalization testbed")
     parser.add_argument("--input_dir", type=str, required=True)
-    parser.add_argument("--latex", action="store_true")
     args = parser.parse_args()
 
     records = load_records(args.input_dir)
@@ -113,6 +118,7 @@ def main():
     test_envs = range(datasets.num_environments(dataset))
     table = [[None for _ in [*test_envs, "Avg"]]]
     means = []
+    trial_accs_list = []
     for j, test_env in enumerate(test_envs):
         trial_accs = (grouped_records
             .filter_equals(
@@ -121,6 +127,9 @@ def main():
             ).select("sweep_acc"))
         mean, err, table[0][j] = format_mean(trial_accs, False)
         means.append(mean)
+        trial_accs_list.append(trial_accs)
+
+    print_trials(trial_accs_list, datasets.get_dataset_class(dataset).ENVIRONMENTS, latex=False)
 
     if None in means:
         table[0][-1] = "X"
