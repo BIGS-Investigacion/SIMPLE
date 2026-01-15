@@ -32,6 +32,8 @@ class InfiniteDataLoader:
             batch_size=batch_size,
             drop_last=True)
 
+        self._length = len(dataset) // batch_size
+
         self._infinite_iterator = iter(torch.utils.data.DataLoader(
             dataset,
             num_workers=num_workers,
@@ -43,7 +45,7 @@ class InfiniteDataLoader:
             yield next(self._infinite_iterator)
 
     def __len__(self):
-        raise ValueError
+        return self._length
 
 class FastDataLoader:
     """DataLoader wrapper with slightly improved speed by not respawning worker
