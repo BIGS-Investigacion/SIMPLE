@@ -11,7 +11,8 @@ from torch.utils.data.sampler import RandomSampler
 # Import datasets and hyperparameter registry from domainbed package
 from miscellaneous.domainbed import datasets
 from miscellaneous.domainbed import hparams_registry
-
+from miscellaneous.domainbed.lib import misc
+from miscellaneous.domainbed.lib import fast_data_loader
 
 class _InfiniteSampler(torch.utils.data.Sampler):
     """Wraps another Sampler to yield an infinite stream."""
@@ -55,9 +56,29 @@ class InfiniteDataLoader:
     def __len__(self):
         return self._length
 
+def get_domainbed_splits(dataset, test_envs, trial_seed, holdout_fraction=0.2, full_test_data=True):
+
+    in_splits = []
+    out_splits = []
+    for env_i, env in enumerate(dataset):
+
+        if env_i in test_envs and full_test_data:
+            _, in_ = misc.split_dataset(env,
+                0,
+                misc.seed_hash(trial_seed, env_i))
+            out = in_
+        else:
+            out, in_ = misc.split_dataset(env,
+            int(len(env)*holdout_fraction),
+            misc.seed_hash(trial_seed, env_i))
+
+        in_splits.append(in_)
+        out_splits.append(out)
+
+    return in_splits, out_splits
 
 # Define a function to create data loaders for domain generalization tasks
-def domainbed_dataloader(dataset, data_dir, test_envs, batch_size, domain_random = True, work_num = 4):
+def domainbed_dataloader(dataset, data_dir, test_envs, trial_seed, batch_size, domain_random = True, work_num = 4):
 
     # Get default hyperparameters for the given dataset
     hparams = hparams_registry.default_hparams('IGA', dataset)
@@ -125,36 +146,46 @@ def domainbed_dataloader(dataset, data_dir, test_envs, batch_size, domain_random
         # If domain_random is False, create infinite dataloaders for each training domain,
         # with separate training and validation samplers
         
-        train_samplers = [RandomSampler(range(0,int(len(env)*0.8))) for i, env in enumerate(source_domain)]
-        val_samplers = [RandomSampler(range(int(len(env)*0.8), len(env))) for i, env in enumerate(source_domain)]
+        # The following code has been modified to obtain the same divisions as those obtained in DomainBed.
+
+        in_splits, out_splits = get_domainbed_splits(
+            dataset=dataset,
+            test_envs=test_envs,
+            trial_seed=trial_seed,
+            holdout_fraction=0.2,
+            full_test_data=True
+        )
+
+        source_indices = [dataset.datasets.index(env) for env in source_domain]
+        target_indices = [dataset.datasets.index(env) for env in target_domain]
 
         train_loaders = [
-            SoftwarePipeLine(InfiniteDataLoader(
-                env,
+            fast_data_loader.InfiniteDataLoader(
+                in_splits[i],
                 weights = None,
                 batch_size=batch_size,
-                num_workers=work_num, sampler = train_samplers[i], drop_last = True), env = True) for i, env in enumerate(source_domain)
+                num_workers=work_num) for i in source_indices
         ]
 
         valid_loaders = [
-            SoftwarePipeLine(DataLoader(
-                env,
-                batch_size=batch_size, sampler = val_samplers[i],
-                num_workers=work_num, pin_memory=True, drop_last = True), env = True) for i, env in enumerate(source_domain)
+            DataLoader(
+                out_splits[i],
+                batch_size=batch_size, shuffle=False,
+                num_workers=work_num, pin_memory=True, drop_last = True) for i in source_indices
         ]
 
         test_loaders = [
-            SoftwarePipeLine(DataLoader(
-                env,
+            DataLoader(
+                in_splits[i],
                 batch_size=batch_size, shuffle=False, 
-                num_workers=work_num, pin_memory=True), env = True) for i, env in enumerate(target_domain)
+                num_workers=work_num, pin_memory=True) for i in target_indices
         ]
 
         full_loaders = [
-            SoftwarePipeLine(DataLoader(
+            DataLoader(
                 env,
                 batch_size=batch_size, shuffle=False,
-                num_workers=work_num, pin_memory=True), env = True) for i, env in enumerate(dataset)
+                num_workers=work_num, pin_memory=True) for i, env in enumerate(dataset)
         ]
 
     # Return the dataloaders, with a list of class names
