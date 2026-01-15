@@ -33,7 +33,7 @@ dataset_inference_information = {
 
         'CervixCyto': {'preload': True, 'domain_num': 4, 'class_type': 3}, 'ColoHisto':{'preload': True, 'domain_num': 4, 'class_type': 2},
         'BreastHist':{'preload': True, 'domain_num': 4, 'class_type': 2}, 'LungHist':{'preload': True, 'domain_num': 4, 'class_type': 2},
-        'ProstateHist':{'preload': True, 'domain_num': 4, 'class_type': 4}
+        'ProstateHist':{'preload': True, 'domain_num': 4, 'class_type': 4},
         },
     'flops_test': {'preload': False}
 }
@@ -178,7 +178,7 @@ class Model_pool(torch.nn.Module):
                 self.models[i].cpu()
             y_hats.append(y_hat)
             torch.cuda.empty_cache() 
-        return y_hat
+        return y_hats
 
     # Inference using preloaded models in self.preload_dic
     def inference_by_preload(self, images, idxs, domain_idxs = None, split = None, epoch = -1):
@@ -391,7 +391,7 @@ class Ensemble_of_ensemble(torch.nn.Module):
                 
                 # Load the data using the domainbed_dataloader function and assign it to the train_loader, val_loader, test_loader, full_loader, and class_name variables
                 self.train_loader, self.val_loader, self.test_loader, self.full_loader, self.class_name = domainbed_dataloader(dataset = args.domainbed_dataset, data_dir = data_dir,\
-                    test_envs = [args.domainbed_test_env], batch_size = args.batch_size,
+                    test_envs = [args.domainbed_test_env], trial_seed=args.trial_seed, batch_size = args.batch_size,
                     domain_random = args.mixed_training, work_num = work_num_dic[args.domainbed_dataset])
 
                 # Check if type(self.train_loader) is equal to list
@@ -703,8 +703,7 @@ class Ensemble_net(torch.nn.Module):
         softmax_multi_child_pred = softmax_multi_child_pred.squeeze(1)
 
         # Compute the true confidence scores by concatenating softmax probabilities along the class axis and applying a softmax function
-        true_confs = torch.softmax(torch.cat([softmax_multi_child_pred[index,true_class::class_type].unsqueeze(0) for index, true_class in enumerate(labels)], dim = 0).detach(), dim = 1)
-
+        true_confs = torch.cat([softmax_multi_child_pred[index,true_class::class_type].unsqueeze(0) for index, true_class in enumerate(labels)], dim = 0).detach()
         # If using true confidence scores
         if self.use_true_conf:
             weights = true_confs
@@ -739,7 +738,7 @@ class Ensemble_net(torch.nn.Module):
             post_weights = F.normalize(post_weights, p=1, dim=1, eps=1e-12)
 
         # Normalize weights
-        weighted_mat = F.normalize(weights, p=1, dim=1, eps=1e-12)
+        weighted_mat = F.softmax(weights, dim=1)
 
         # If using optimal weights
         if self.use_optimal:
@@ -770,8 +769,7 @@ class Ensemble_net(torch.nn.Module):
         # If the mode is other than random or pure model adapter
         if self.mode not in ['random', 'pure_model_adapter']:
             # Compute confidence loss
-            confidence_loss = self.confidence_loss_func(torch.nn.functional.softmax(weighted_mat, dim = -1),
-                torch.nn.functional.softmax(true_confs, dim = -1))
+            confidence_loss = self.confidence_loss_func(weighted_mat, true_confs)
         else:
             confidence_loss = 0
 
