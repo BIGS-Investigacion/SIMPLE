@@ -83,12 +83,6 @@ REGISTRY = {
     'multi_gpu': multi_gpu_launcher
 }
 
-'''try:
-    from domainbed import facebook
-    facebook.register_command_launchers(REGISTRY)
-except ImportError:
-    pass'''
-
 class Job:
     NOT_LAUNCHED = 'Not launched'
     INCOMPLETE = 'Incomplete'
@@ -164,13 +158,6 @@ def make_args_list(n_trials, dataset_names, n_hparams_from, n_hparams, **action_
     args_list = []
     for trial_seed in range(n_trials):
         for dataset in dataset_names:
-
-            '''if single_test_envs:
-                all_test_envs = [
-                    [i] for i in range(datasets.num_environments(dataset))]
-            else:
-                all_test_envs = all_test_env_combinations(
-                    datasets.num_environments(dataset))'''
             
             all_test_envs = [0,1,2,3]
                 
@@ -183,10 +170,9 @@ def make_args_list(n_trials, dataset_names, n_hparams_from, n_hparams, **action_
                     train_args['ensemble_weight'] = random.uniform(0.01, 1.0)
                     train_args['child_weight'] = random.uniform(0.01, 1.0)
                     train_args['confidence_weight'] = random.uniform(0.01, 1.0)
-                    train_args['batch_size'] = random.choice([32,64,128,256])
-                    train_args['batch_size'] = random.choice([32,64,128,256])
+                    train_args['batch_size'] = random.choice([32,64,128])
                     train_args['ensemble_lr'] = 10 ** random.uniform(np.log10(1e-4), np.log10(0.1))
-                    train_args['clf_lr'] = 10 ** random.uniform(np.log10(1e-4), np.log10(0.1))
+                    train_args['clf_lr'] = 1
                     train_args['weight_decay'] = random.choice([1e-3, 1e-4, 1e-5, 1e-6, 1e-7])
                     train_args['hparam_seed'] = hparams_seed
                     train_args['trial_seed'] = trial_seed
