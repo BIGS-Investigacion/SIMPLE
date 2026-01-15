@@ -226,11 +226,11 @@ else: # else train model
 
         # implement early stopping for non-DomainNet datasets
         if args.domainbed_dataset != 'DomainNet':
-            if early_stop_count == 5:
+            if val_acc >= 100 or early_stop_count == 5:
                 print('early stop')
                 break
         else: # implement early stopping for DomainNet dataset
-            if val_acc >= 100 or early_stop_count == 3:
+            if val_acc >= 100 or early_stop_count == 5:
                 print('DomainNet early stop')
                 break            
 
