@@ -315,7 +315,6 @@ class CTransPath(torch.nn.Module):
 class Musk(torch.nn.Module):
 
     def __init__(self, checkpoint_path):
-        from patho_networks import musk_utils, musk_modeling
         import timm
         super(Musk, self).__init__()
 
