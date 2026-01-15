@@ -337,7 +337,7 @@ class CervixCyto(MultipleEnvironmentImageFolder):
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
 
 class ColoHisto(MultipleEnvironmentImageFolder):
-    ENVIRONMENTS = ["Chaoyang", "CRC-VAL-HE-7K", "Kather", "LC25000"]
+    ENVIRONMENTS = ["Chaoyang", "EBHI-SEG", "Kather", "LC25000"]
     def __init__(self, root, test_envs, hparams):
         self.dir = os.path.join(root, "ColoHisto/")
         super().__init__(self.dir, test_envs, hparams['data_augmentation'], hparams)
