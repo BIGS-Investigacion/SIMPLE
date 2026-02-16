@@ -32,6 +32,10 @@ def IIDAccuracySelectionMethod(records):
 
     return records.argmax('best_val_acc')['valbest_test_acc']
 
+def IIDAccuracy(records):
+
+    return records.argmax('best_val_acc')['best_val_acc']
+
 def format_mean(data, latex):
     """Given a list of datapoints, return a string describing their mean and
     standard error"""
@@ -109,10 +113,44 @@ def main():
         dataset = dataset_names[0]
 
     # get sweep_acc value (best test acc given a (trial_seed, dataset, test_env) pair)
-    grouped_records = get_grouped_records(records)
-    grouped_records = grouped_records.map(lambda group:
+    grouped_records_ = get_grouped_records(records)
+    grouped_records = grouped_records_.map(lambda group:
         { **group, "sweep_acc": IIDAccuracySelectionMethod(group["records"]) }
     ).filter(lambda g: g["sweep_acc"] is not None)
+    grouped_val_records = grouped_records_.map(lambda group:
+        { **group, "sweep_acc": IIDAccuracy(group["records"]) }
+    ).filter(lambda g: g["sweep_acc"] is not None)
+
+    # Get tables for validation
+    # Get dataset table
+    test_envs = range(datasets.num_environments(dataset))
+    table = [[None for _ in [*test_envs, "Avg"]]]
+    means = []
+    trial_accs_list = []
+    for j, test_env in enumerate(test_envs):
+        trial_accs = (grouped_val_records
+            .filter_equals(
+                "dataset, test_env",
+                (dataset, test_env)
+            ).select("sweep_acc"))
+        mean, err, table[0][j] = format_mean(trial_accs, False)
+        means.append(mean)
+        trial_accs_list.append(trial_accs)
+
+    if None in means:
+        table[0][-1] = "X"
+    else:
+        table[0][-1] = "{:.1f}".format(sum(means) / len(means))
+
+    col_labels = [
+            "Algorithm",
+            *datasets.get_dataset_class(dataset).ENVIRONMENTS,
+            "Avg"
+        ]
+    header_text = (f"Dataset: {dataset}, "
+        f"Validation results")
+    print_table(table, header_text, ['SIMPLE'], list(col_labels),
+        colwidth=20, latex=False)
 
     # Get dataset table
     test_envs = range(datasets.num_environments(dataset))
