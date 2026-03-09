@@ -1,0 +1,9 @@
+(patho)Conch:/home/jesferrom/pytorch-models/conch_chkpt.bin
+(patho)CTransPath:/home/jesferrom/pytorch-models/ctranspath.pth
+(patho)RetCCL:/home/jesferrom/pytorch-models/retccl_chkpt.pth
+(patho)Quilt:QuiltNet-B-16-PMB
+(patho)Quilt:QuiltNet-B-32
+(patho)Biomed
+(patho)Phikon
+(patho)Plip
+(timm)resnet50
