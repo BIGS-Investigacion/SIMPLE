@@ -5,7 +5,7 @@ import numpy as np
 
 import torch
 import torch.utils.data
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 from torch.utils.data.sampler import RandomSampler
 
 # Import datasets and hyperparameter registry from domainbed package
@@ -258,3 +258,51 @@ class SoftwarePipeLine(object):
                 index = next_idx
                 env = next_env
             yield input, target, index, env
+
+# ----------------------------------------------------------------
+# LODO-Val Features
+
+def get_domainbed_splits_lodoval(dataset, trial_seed):
+    
+    in_splits = []
+    for env_i, env in enumerate(dataset):
+        _, in_ = misc.split_dataset(env, 0, misc.seed_hash(trial_seed, env_i))
+        in_splits.append(in_)
+    return in_splits
+
+def domainbed_dataloader_lodoval(dataset, data_dir, test_envs, trial_seed, batch_size,
+                                  domain_random=True, work_num=4):
+    
+    assert len(test_envs) == 2
+    held_out = list(test_envs)
+
+    hparams = hparams_registry.default_hparams('IGA', dataset)
+    dataset = vars(datasets)[dataset](data_dir, held_out, hparams)
+    classes = dataset[0].classes
+
+    in_splits = get_domainbed_splits_lodoval(dataset, trial_seed)
+    source_indices = [i for i in range(len(dataset)) if i not in held_out]
+
+    wrap = (lambda dl: SoftwarePipeLine(dl, env=True)) if domain_random else (lambda dl: dl)
+
+    def eval_loader(i):
+        return wrap(DataLoader(in_splits[i], batch_size=batch_size, shuffle=False,
+                               num_workers=work_num, pin_memory=True, drop_last=False))
+
+    # un loader por entorno excluido, indexado por número de entorno, sin roles
+    held_out_loaders = {i: eval_loader(i) for i in held_out}
+
+    if domain_random:
+        source_domains = ConcatDataset([in_splits[i] for i in source_indices])
+        train_loaders = wrap(DataLoader(
+            source_domains, batch_size=min(batch_size, len(source_domains)),
+            shuffle=True, drop_last=True, num_workers=work_num, pin_memory=True))
+    else:
+        train_loaders = [
+            fast_data_loader.InfiniteDataLoader(
+                in_splits[i], weights=None, batch_size=batch_size, num_workers=work_num)
+            for i in source_indices
+        ]
+
+    full_loaders = [eval_loader(i) for i in range(len(dataset))]
+    return train_loaders, held_out_loaders, full_loaders, classes
