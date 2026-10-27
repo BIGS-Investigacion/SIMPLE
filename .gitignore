@@ -31,6 +31,7 @@ build
 *.h5
 *.pth
 *.json
+*.jsonl
 
 # Environment and configuration files
 .env
@@ -41,6 +42,7 @@ config
 *.config
 
 # Logs
+sweep/
 output
 logs
 *.log
