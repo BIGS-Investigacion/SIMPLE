@@ -124,7 +124,7 @@ def _sensitivity_specificity_per_class(results):
 def mean_loss(results):
     return float(np.average(results["losses"], weights=results["weights"]))
 
-def auroc(results):
+def auroc_(results):
     labels, probs, w = results["labels"], results["probs"], results["weights"]
 
     if len(np.unique(labels)) < 2:
@@ -150,6 +150,62 @@ def auroc(results):
             average="macro",
             sample_weight=w,
         )
+
+
+def auroc(results):
+    from torchmetrics.functional.classification import multiclass_auroc
+    labels, probs, w = results["labels"], results["probs"], results["weights"]
+
+    if len(np.unique(labels)) < 2:
+        # AUROC no está definido si el dominio solo tiene una clase presente
+        return float("nan")
+
+    if probs.ndim == 1:
+        # Red con salida escalar (p.size(1) == 1 en get_predictions)
+        return roc_auc_score(labels, probs, sample_weight=w)
+    elif probs.shape[1] == 2:
+        # Softmax de 2 columnas pero problema binario -> solo prob. de la clase positiva
+        return roc_auc_score(labels, probs[:, 1], sample_weight=w)
+    else:
+        # Multiclase real (3+ clases): macro-AUROC one-vs-rest robusto
+        labels = np.asarray(labels).astype(np.int64).ravel()
+        probs = np.asarray(probs, dtype=np.float64)   # float64 para evitar problemas de precisión
+        if w is not None:
+            w = np.asarray(w, dtype=np.float64).ravel()
+
+        # Descartar filas con NaN/inf (una sola fila rompería toda la métrica)
+        finite = np.isfinite(probs).all(axis=1)
+        if not finite.all():
+            print(f"[auroc] descartando {(~finite).sum()} filas con NaN/inf")
+            labels, probs = labels[finite], probs[finite]
+            if w is not None:
+                w = w[finite]
+
+        # Clases evaluables: con positivos y negativos en este dominio
+        C = probs.shape[1]
+        counts = np.bincount(labels, minlength=C)
+        valid = (counts > 0) & (counts < len(labels))
+        if not valid.any():
+            return float("nan")
+
+        uniform_w = w is None or np.allclose(w, w.flat[0])
+        if uniform_w:
+            # Sin pesos relevantes: torchmetrics (no exige que las filas sumen 1)
+            per_class = multiclass_auroc(
+                torch.from_numpy(probs),
+                torch.from_numpy(labels),
+                num_classes=C,
+                average=None,
+            )
+            return float(per_class[torch.from_numpy(valid)].mean().item())
+        else:
+            # Pesos no uniformes: OvR manual con sklearn, que sí soporta sample_weight
+            aucs = [
+                roc_auc_score((labels == c).astype(int), probs[:, c], sample_weight=w)
+                for c in np.flatnonzero(valid)
+            ]
+            return float(np.mean(aucs))
+        
 
 def _accuracy(results):
     return accuracy_score(

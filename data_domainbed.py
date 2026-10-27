@@ -271,26 +271,29 @@ def get_domainbed_splits_lodoval(dataset, trial_seed):
     return in_splits
 
 def domainbed_dataloader_lodoval(dataset, data_dir, test_envs, trial_seed, batch_size,
-                                  domain_random=True, work_num=4):
+                                  domain_random=True, work_num=4, holdout_fraction=0.0):
     
-    assert len(test_envs) == 2
+    assert len(test_envs) in (1, 2)
+    assert (len(test_envs)==1 and holdout_fraction > 0) or (len(test_envs)==2 and holdout_fraction == 0)
     held_out = list(test_envs)
 
     hparams = hparams_registry.default_hparams('IGA', dataset)
     dataset = vars(datasets)[dataset](data_dir, held_out, hparams)
     classes = dataset[0].classes
 
-    in_splits = get_domainbed_splits_lodoval(dataset, trial_seed)
+    in_splits, out_splits = get_domainbed_splits(
+        dataset, held_out, trial_seed, holdout_fraction, full_test_data=True)
     source_indices = [i for i in range(len(dataset)) if i not in held_out]
 
     wrap = (lambda dl: SoftwarePipeLine(dl, env=True)) if domain_random else (lambda dl: dl)
 
-    def eval_loader(i):
-        return wrap(DataLoader(in_splits[i], batch_size=batch_size, shuffle=False,
+    def eval_loader(split):
+        return wrap(DataLoader(split, batch_size=batch_size, shuffle=False,
                                num_workers=work_num, pin_memory=True, drop_last=False))
 
-    # un loader por entorno excluido, indexado por número de entorno, sin roles
-    held_out_loaders = {i: eval_loader(i) for i in held_out}
+    held_out_loaders = {i: eval_loader(in_splits[i]) for i in held_out}
+    val_loaders = {i: eval_loader(out_splits[i])
+                   for i in source_indices if len(out_splits[i]) > 0}
 
     if domain_random:
         source_domains = ConcatDataset([in_splits[i] for i in source_indices])
@@ -304,5 +307,8 @@ def domainbed_dataloader_lodoval(dataset, data_dir, test_envs, trial_seed, batch
             for i in source_indices
         ]
 
-    full_loaders = [eval_loader(i) for i in range(len(dataset))]
-    return train_loaders, held_out_loaders, full_loaders, classes
+    full_loaders = [wrap(DataLoader(env, batch_size=batch_size, shuffle=False,
+                                    num_workers=work_num, pin_memory=True))
+                    for env in dataset]
+    
+    return train_loaders, held_out_loaders, val_loaders, full_loaders, classes

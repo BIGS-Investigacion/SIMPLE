@@ -390,11 +390,12 @@ class Ensemble_of_ensemble(torch.nn.Module):
                     work_num_dic = {'DomainNet': 2, 'VLCS': 4, 'PACS': 4, 'OfficeHome': 2, 'TerraIncognita': 4, 'CervixCyto':4, 'ColoHisto':4, 'BreastHist':4, 'DermaDG': 4, 'LungHist':4, 'OrganMNIST':4, 'ProstateHist':4, "BreastHist_Debbug":4}
                 
                 # Load the data using the domainbed_dataloader function and assign it to the train_loader, val_loader, test_loader, full_loader, and class_name variables
-                self.train_loader, self.held_out_loaders, self.full_loader, self.class_name = domainbed_dataloader_lodoval(
+                self.train_loader, self.held_out_loaders, self.val_loaders, self.full_loader, self.class_name = domainbed_dataloader_lodoval(
                     dataset=args.domainbed_dataset, data_dir=data_dir,
                     test_envs=args.domainbed_test_envs,
                     trial_seed=args.trial_seed, batch_size=args.batch_size,
                     domain_random=args.mixed_training, work_num=work_num_dic[args.domainbed_dataset],
+                    holdout_fraction=args.holdout_fraction
                 )
                 self.held_out_envs = list(args.domainbed_test_envs)
 
@@ -408,14 +409,14 @@ class Ensemble_of_ensemble(torch.nn.Module):
                     self.train_loader = zip(*self.train_loader)
                     
                     # Set the num_epoch variable to the integer division of 5001 and the steps_per_epoch
-                    self.num_epoch = int(5001/self.steps_per_epoch)
+                    self.num_epoch = int(1501/self.steps_per_epoch)
                 else:
                     
                     # Set the steps_per_epoch variable to the length of the train_loader
                     self.steps_per_epoch = len(self.train_loader)
                     
                     # Set the num_epoch variable to the integer division of 5001 and the steps_per_epoch
-                    self.num_epoch = int(5001/self.steps_per_epoch)
+                    self.num_epoch = int(1501/self.steps_per_epoch)
             
             # Check if args.super_mixed is True
             else:
@@ -452,7 +453,7 @@ class Ensemble_of_ensemble(torch.nn.Module):
                 train_loader_1 = zip(*train_loader_1)
                 
                 # Set the num_epoch variable to the integer division of 5001 and the steps_per_epoch
-                self.num_epoch = int(5001/self.steps_per_epoch)
+                self.num_epoch = int(1501/self.steps_per_epoch)
                 
                 # Set the train_loader variable to a tuple of train_loader_1 and train_loader_2
                 self.train_loader = (train_loader_1, train_loader_2)

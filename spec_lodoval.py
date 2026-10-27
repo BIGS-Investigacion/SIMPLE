@@ -33,7 +33,7 @@ parser.add_argument("--seed", "--seed", help="this is random seed", dest="random
 parser.add_argument("--dataset", "--dataset", help="this is dataset that will be tested on", dest="dataset", type=str, default='domainbed')
 parser.add_argument("--domainbed_dataset", "--domainbed_dataset", dest="domainbed_dataset", default=None, type=str)
 parser.add_argument("--domainbed_test_envs", "--domainbed_test_envs", dest="domainbed_test_envs",
-                     nargs=2, type=int, default=[0, 1],
+                     nargs="+", type=int, default=[0, 1],
                      help="los dos entornos excluidos del entrenamiento (sin distinguir val/test)")
 parser.add_argument("--pretrain_model_list", "--pretrain_model_list", dest="pretrain_model_list", default='modelpool_list/model_list_test.txt', type=str)
 parser.add_argument("--input_dir", "--input_dir", dest="input_dir", default='./miscellaneous/domainbed/data/', type=str)
@@ -41,6 +41,7 @@ parser.add_argument("--output_dir", "--output_dir", dest="output_dir", default='
 parser.add_argument("--infer_dir", "--infer_dir", dest="infer_dir", default="./inferences/")
 parser.add_argument("--hparam_seed", "--hparam_seed", help="random hparam seed (for sweep only)", dest="hparam_seed", type=int, default=0)
 parser.add_argument("--trial_seed", "--trial_seed", help="random trial seed (for sweep only)", dest="trial_seed", type=int, default=0)
+parser.add_argument("--holdout_fraction", "--holdout_fraction", help="holdout fraction", dest="holdout_fraction", type=float, default=0.0)
 
 # mode setting
 parser.add_argument("--save_inference_only", "--save_inference_only", dest="save_inference_only", action='store_true')
@@ -99,6 +100,8 @@ print('args:',args)
 
 # initialize dictionary to store results
 res = {}
+
+assert torch.cuda.is_available()
 
 # set device
 cuda_available = torch.cuda.is_available() # check if CUDA is available for GPU computation
@@ -159,18 +162,6 @@ args.num_epoch = ensemble_net.num_epoch
 
 num_classes = len(ensemble_net.class_name)
 
-extra_metrics = {"bacc": balanced_accuracy,
-                 "f1": macro_f1,
-                 "auroc": auroc,
-                 "sensitivity": sensitivity,
-                 "specificity": specificity,
-                 "macro_sensitivity": macro_sensitivity,
-                 "macro_specificity": macro_specificity}
-
-if num_classes == 2:
-    extra_metrics["f1_pos0"] = make_binary_f1(0)
-    extra_metrics["f1_pos1"] = make_binary_f1(1)
-
 held_out_envs = ensemble_net.held_out_envs          # antes: val_key / test_key
 epochs_path = f"{args.output_dir}/epochs.jsonl"      # métricas por checkpoint
 outputs_path = f"{args.output_dir}/outputs.jsonl"    # predicciones
@@ -180,7 +171,14 @@ if args.save_inference_only:
 else:
     held_out_envs = ensemble_net.held_out_envs   # los dos entornos excluidos, sin roles
     num_classes = len(ensemble_net.class_name)
-    extra_metrics = {}
+    
+    extra_metrics = {"bacc": balanced_accuracy,
+                 "f1": macro_f1,
+                 "auroc": auroc,
+                 "sensitivity": sensitivity,
+                 "specificity": specificity,
+                 "macro_sensitivity": macro_sensitivity,
+                 "macro_specificity": macro_specificity}
     if num_classes == 2:
         extra_metrics["f1_pos0"] = make_binary_f1(0)
         extra_metrics["f1_pos1"] = make_binary_f1(1)
@@ -211,25 +209,14 @@ else:
                 split='evaluation', model_pool=model_pool, args=args, ret_preds=True)
             preds[f"env{env_i}_in"] = env_preds
 
-        """
-        for env_i in held_out_envs:
+        # --- validación de los entornos fuente ---
+        for env_i, loader in ensemble_net.val_loaders.items():
             print('------------------------------------------------------------------------')
-            print(f'epoch {epoch} evaluating env{env_i}')
-            acc, topk_indices, env_preds = validate_ensemble(
-                epoch, ensemble_net, ensemble_net.held_out_loaders[env_i],
+            print(f'epoch {epoch} validating env{env_i}')
+            _, _, env_preds = validate_ensemble(
+                epoch, ensemble_net, loader,
                 split='evaluation', model_pool=model_pool, args=args, ret_preds=True)
-            preds[f"env{env_i}_in"] = env_preds
-            topk_by_env[env_i] = topk_indices
-
-        # --- reselección de top-k modelos (ver nota más abajo) ---
-        if epoch == args.rough_rank_epoch - 1:
-            combined_rank = sum(topk_by_env.values())  # ver nota
-            topk_indices = torch.topk(combined_rank, ...).indices  # ADAPTAR, ver nota
-            reselected_models = [pretrained_models[i] for i in topk_indices]
-            model_pool.reinit(reselected_models)
-            args.model_num = len(reselected_models)
-            ensemble_net.reinit(reselected_models, topk_indices, args)
-            res['topk_indices'] = str(topk_indices.tolist())"""
+            preds[f"env{env_i}_out"] = env_preds
 
         # --- logging ---
         step = epoch * ensemble_net.steps_per_epoch
