@@ -1,57 +1,175 @@
-# SIMPLE: Specialized Model-Sample Matching for Domain Generalization
-This repository contains the code for the paper titled "[SIMPLE: Specialized Model-Sample Matching for Domain Generalization](https://seqml.github.io/simple/)" that will be presented at the International Conference on Learning Representations (ICLR) 2023.
+# Domain Generalization in Computational Pathology: SIMPLE
 
-## Abstract
-> In domain generalization (DG), most existing methods aspire to fine-tune a specific pretrained model through novel DG algorithms. In this paper, we propose an alternative direction, i.e., to efficiently leverage a pool of pretrained models without fine-tuning. Through extensive empirical and theoretical evidence, we demonstrate that (1) pretrained models have possessed generalization to some extent while there is no single best pretrained model across all distribution shifts, and (2) out-of-distribution (OOD) generalization error depends on the fitness between the pretrained model and unseen test distributions. This analysis motivates us to incorporate diverse pretrained models and to dispatch the best matched models for each OOD sample by means of recommendation techniques. To this end, we propose SIMPLE, a specialized model-sample matching method for domain generalization. First, the predictions of pretrained models are adapted to the target domain by a linear label space transformation. A matching network aware of model specialty is then proposed to dynamically recommend proper pretrained models to predict each test sample. The experiments on DomainBed show that our method achieves significant performance improvements (up to 12.2% for individual dataset and 3.9% on average) compared to state-of-the-art (SOTA) methods and further achieves 6.1% gain via enlarging the pretrained model pool. Moreover, our method is highly efficient and achieves more than 1000 times training speedup compared to the conventional DG methods with fine-tuning a pretrained model.
+> Modified version of SIMPLE used to evaluate domain generalization methods in histopathology.
+> Original work: [SIMPLE: Specialized Model-Sample Matching for Domain Generalization](https://openreview.net/forum?id=BqrPeZ_e5P) (ICLR 2023) | [Project Page](https://github.com/microsoft/SeqML/tree/main/SIMPLE)
+> Part of the comparison of the [DomainBed](https://github.com/BIGS-Investigacion/DomainBed) repository, extended for computational pathology.
 
-## Environment Dependencies
-### Dependencies
-The following command installs all the necessary dependencies for this repository:
-```
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19471815.svg)](https://doi.org/10.5281/zenodo.19471815)
+
+## Overview
+
+This repository provides:
+
+- **SIMPLE**, modified for our experiments on histopathology.
+- Support for pathology foundation models. A small model pool of pathology models is in [`modelpool_list/patho_list.txt`](modelpool_list/patho_list.txt) (see [Models](#models)).
+- Support for the **unified multi-domain histopathology benchmark**: 16 organ-specific domains from 15 public datasets ([Histo-DG-Benchmark](https://doi.org/10.5281/zenodo.19471815)).
+- An **efficient LODO validation protocol** adapted to SIMPLE: [`miscellaneous/domainbed/scripts/lodoval`](miscellaneous/domainbed/scripts/lodoval/readme.md).
+
+## Methods compared
+
+| Method | Where to find it |
+|--------|------------------|
+| ERM (full fine-tuning) | [BIGS-Investigacion/DomainBed](https://github.com/BIGS-Investigacion/DomainBed) (`ERM`) |
+| ERM<sub>LP</sub> (linear probing) | [BIGS-Investigacion/DomainBed](https://github.com/BIGS-Investigacion/DomainBed) (`ERM` with `"linear_probe": true`) |
+| ERM<sub>LoRA</sub> | [BIGS-Investigacion/DomainBed](https://github.com/BIGS-Investigacion/DomainBed) (`ERM_LoRA`) |
+| MoA (Mixture-of-Adapters) | [BIGS-Investigacion/MoA](https://github.com/BIGS-Investigacion/MoA), modified version |
+| SIMPLE | This repository |
+
+The domain-shift analyses ([`dshift_analysis`](https://github.com/BIGS-Investigacion/DomainBed)) are in the DomainBed repository.
+
+## Installation
+
+```bash
+git clone https://github.com/BIGS-Investigacion/SIMPLE.git
+cd SIMPLE
+
+conda create -n SIMPLE python=3.11.11
+conda activate SIMPLE
+
+pip install torch==2.7.0 torchvision==0.22.0 \
+    --index-url https://download.pytorch.org/whl/cu126
+
+pip install git+https://github.com/mahmoodlab/CONCH.git@141cc09c7d4ff33d8eda562bd75169b457f71a62
+pip install git+https://github.com/mahmoodlab/TRIDENT.git@25f15396116c43c0b1feb928d5331c8b2a772dfd
+
 pip install -r requirements.txt
 ```
 
+**Tested with:** Python 3.11.11, PyTorch 2.7.0, CUDA 12.6, NVIDIA A40 GPU, Rocky Linux 8.8 (x86_64).
 
-### Download datasets
-Run the following command to download the datasets used in the experiments:
+## Models
+
+We support foundation models. The models are defined and implemented in [`model_wrappers.py`](model_wrappers.py). To add a new pathology model, define and implement it in this script.
+
+**We do not provide the weights of any model.** Follow the license terms of each model. Some models can need access permission.
+
+There are two ways to get the weights:
+
+- **With [Trident](https://github.com/mahmoodlab/TRIDENT).** Some models are built with Trident, and Trident downloads their weights.
+- **Local checkpoint.** Some models are not built with Trident. Download their weights and save them locally. Then give the path to the checkpoint in the model pool list (see below).
+
+See `model_wrappers.py` for the details of each model.
+
+### Model pool
+
+The folder [`modelpool_list`](modelpool_list) has the model pool lists. The file `patho_list.txt` has a small pool of pathology models.
+
+To add a pathology model to a `.txt` file, use this key:
+
 ```
-python -m miscellaneous.domainbed.scripts.download --data_dir=./miscellaneous/domainbed/data
+(patho)Model:Arg
 ```
 
-### Saving model predictions
+- `Model` is the name of the model, as defined in `model_wrappers.py`.
+- `Arg` defines the checkpoint path or specifies the weights. Its value depends on the model. See `model_wrappers.py` for each model.
 
-Note that all pretrained models are not fine-tuned, so saving their predictions rather than take inference when needed can save a lot of time. Follow the steps given below to save the predictions of the pretrained models:
+## Data
 
-**Step 1:** Define the model pool by creating a .txt file that lists the names of the pre-trained models. This repository provides two examples: *'sample_list.txt'* and *'full_list.txt'*. 
+The benchmark has **4 organs** (breast, colon, lung, prostate) with **4 domains each**. Each domain comes from a different public dataset. LC25000 is used for both colon and lung, which gives 16 domains from 15 datasets.
 
+| Organ | Domains (original datasets) | Classes |
+|-------|-----------------------------|---------|
+| Breast | BACH, BRACS, BreakHis, Burnasyan | Normal/Benign, Malignant |
+| Colon | Chaoyang, EBHI-Seg, Kather2016, LC25000 | Normal/Benign, Malignant |
+| Lung | LC25000, LubLung, LungHist700, UNN-LC | Normal/Benign, Malignant |
+| Prostate | Gleason2019, GleasonCNN, CrowdGleason, SICAPv2 | Normal, Gleason 3, Gleason 4, Gleason 5 |
 
-**Step 2:** Set the path where the pretrained model cache will be saved to by running the following command:
-```
+**We do not redistribute the original data.** The [Zenodo record](https://doi.org/10.5281/zenodo.19471815) (CC BY 4.0) contains the code and instructions to rebuild the processed benchmarks from the original sources. Please cite the original dataset papers (their DOIs are listed in the Zenodo record).
+
+1. Download `Histo-DG-Benchmark.rar` from Zenodo.
+2. Follow the instructions in each organ folder to download and process the original datasets.
+3. Place the result in your data directory, following the DomainBed structure `dataset/domain/class/image.xyz`.
+
+For example, with the data stored in `/home/datasets/BreastHist/BACH/...`, use `--input_dir "/home/datasets/" --dataset "domainbed" --domainbed_dataset "BreastHist".`
+
+## Quick start
+
+To get inferences with an specifyed model pool:
+
+```bash
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export TORCH_HOME="./pytorch_pretrained_models/"
+python -u spec_lodoval.py --save_inference_only --dataset domainbed --domainbed_dataset "$Dataset" --input_dir="$INPUT_DIR" --pretrain_model_list "$POOL_DIR" --infer_dir="$INFER_DIR" --batch_size $Batch_size
 ```
 
+To train model dispatcher:
 
-**Step 3:** Run the spec.py file with the following parameters to generate the predictions of all of the pretrained models in the model pool defined by the pretrain_model_list:
+```bash
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export TORCH_HOME="./pytorch_pretrained_models/"
+CUDA_VISIBLE_DEVICES=0 python -m spec_lodoval \
+  --pretrain_model_list "$POOL_DIR" \
+  --dataset domainbed \
+  --domainbed_dataset "$Dataset" \
+  --input_dir="$INPUT_DIR" \
+  --infer_dir="$INFER_DIR" \
+  --output_dir="$OUTPUT_DIR" \
+  --domainbed_test_env $test_env \
+  --batch_size $Batch_size \
+  --holdout_fraction 0.2
 ```
-python -u spec.py --save_inference_only --dataset domainbed --domainbed_dataset PACS --pretrain_model_list modelpool_list/sample_list.txt --batch_size 256
+
+## Reproducing the experiments
+
+The full pipeline has six steps. Details and all options are in [`miscellaneous/domainbed/scripts/lodoval/readme.md`](miscellaneous/domainbed/scripts/lodoval/readme.md).
+
+| Step | Script | Result |
+|------|--------|--------|
+| 0 | `spec_lodoval.py`  | Saved inferences of the model pool |
+| 1 | `sweep_lodoval.py` | Sweep logs (`results.json` and `epochs.jsonl`) |
+| 2 | `miscellaneous.domainbed.scripts.lodoval.1-get_best_lodoval` | `best.csv` with the best `hparams_seed` per (dataset, algorithm, model, trial_seed, test_env) |
+| 3 | `miscellaneous.domainbed.scripts.lodoval.2-run_best_hparams` | Final runs with the best hparams (local or Slurm) |
+| 4 | `miscellaneous.domainbed.scripts.lodoval.3-get_final_results.py` | One row per run, at a fixed step |
+| 5 | `miscellaneous.domainbed.scripts.lodoval.4-get_table.py` | LaTeX table |
+
+Instead of training every combination of 1 and 2 held-out domains, the sweep only trains the combinations of **2** held-out domains (`--lodoval`). Each run provides validation and test results for both choices of test domain. Every `trial_seed` is treated as an independent experiment.
+
+To run the inferences, launch `spec.lodoval.py` with `--save_inference_only` and set the model pool with `--pretrain_model_list`. To run the sweep with several batch sizes, launch the script once for each batch size. In our experiments, we use batch sizes of 32, 64, and 128.
+
+Example of launching a sweep:
+
+```bash
+
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export TORCH_HOME="./pytorch_pretrained_models/"
+
+CUDA_VISIBLE_DEVICES=0 python -m sweep_lodoval launch \
+  --domainbed_dataset "$Dataset"  \
+  --pretrain_model_list "$POOL_DIR" \
+  --n_hparams_from "$N_hparams_from" \
+  --n_hparams "$N_hparams" \
+  --n_envs "$N_envs" \
+  --input_dir "$INPUT_DIR" \
+  --infer_dir "$INFER_DIR" \
+  --output_dir "$OUTPUT_ROOT" \
+  --seed $Seed \
+  --n_trials $N_trials \
+  --command_launcher local \
+  --skip_confirmation
 ```
 
+## Citation
 
-### Running
-To learn the specialized model-sample matching, use the following command as an example for the PACS dataset in DomainBed:
-```
-CUDA_VISIBLE_DEVICES=0 python spec.py --pretrain_model_list modelpool_list/sample_list.txt --dataset domainbed --domainbed_dataset PACS --domainbed_test_env 0
-```
+If you use this code, please cite SIMPLE:
 
-## Special credits to thirdparty repositories, such as DomainBed
-
-Special credits are given to third-party repositories like [DomainBed](https://github.com/TorchEnsemble-Community/Ensemble-Pytorch) for providing the necessary code to load datasets or neural networks. And we do not declare this in each file within the *'miscellaneous'* repository.
-
-## Reference
-You are more than welcome to cite our paper:
-```
+```bibtex
 @inproceedings{lisimple,
   title={SIMPLE: Specialized Model-Sample Matching for Domain Generalization},
   author={Li, Ziyue and Ren, Kan and Jiang, Xinyang and Shen, Yifei and Zhang, Haipeng and Li, Dongsheng},
   booktitle={The Eleventh International Conference on Learning Representations}
 }
+```
+
+To cite the benchmark data: Histo-DG-Benchmark, [10.5281/zenodo.19471815](https://doi.org/10.5281/zenodo.19471815).
+
+---
