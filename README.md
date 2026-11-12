@@ -160,13 +160,14 @@ CUDA_VISIBLE_DEVICES=0 python -m sweep_lodoval launch \
 
 ## Citation
 
-If you use this code, please cite SIMPLE:
+If you use this code, please cite our paper:
 
 ```bibtex
-@inproceedings{lisimple,
-  title={SIMPLE: Specialized Model-Sample Matching for Domain Generalization},
-  author={Li, Ziyue and Ren, Kan and Jiang, Xinyang and Shen, Yifei and Zhang, Haipeng and Li, Dongsheng},
-  booktitle={The Eleventh International Conference on Learning Representations}
+@article{fernandez2026domainshift,
+  title   = {Domain Generalization in Computational Pathology: Analyzing Shifts and Benchmarking Methods},
+  author  = {Fernández, Jesús and Pachón, Rafael and Bhushan, Megha and Domínguez, Francisco J. and García, Jorge and Macías, Laura},
+  journal = {Journal of Imaging Informatics in Medicine},
+  year    = {Under review}
 }
 ```
 
