@@ -1,8 +1,7 @@
 # Domain Generalization in Computational Pathology: SIMPLE
 
 > Modified version of SIMPLE used to evaluate domain generalization methods in histopathology.
-> Original work: [SIMPLE: Specialized Model-Sample Matching for Domain Generalization](https://openreview.net/forum?id=BqrPeZ_e5P) (ICLR 2023) | [Project Page](https://github.com/microsoft/SeqML/tree/main/SIMPLE)
-> Part of the comparison of the [DomainBed](https://github.com/BIGS-Investigacion/DomainBed) repository, extended for computational pathology.
+> Built on the [original SIMPLE repository](https://github.com/microsoft/SeqML/tree/main/SIMPLE) and part of the [DomainBed](https://github.com/BIGS-Investigacion/DomainBed) pathology benchmark.
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19471815.svg)](https://doi.org/10.5281/zenodo.19471815)
 
